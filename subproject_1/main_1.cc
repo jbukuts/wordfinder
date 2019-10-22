@@ -25,13 +25,20 @@ using std::string;
 #include <fstream>
 using namespace std;
 #include <algorithm> 
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <cctype>        
+#include <stdio.h>
+#include <string.h>
+#include <cctype>
 
+
+
+#define BUF_SIZE 4096
+#define SEM_MUTEX_NAME "/sem-mutex-one"
+#define SEM_MUTEX_NAME_TWO "/sem-mutex-two"
 
 #include "main_1.h"
-
-#define BUF_SIZE 256
-#define SEM_MUTEX_NAME "/sem-mutex"
-#define SEM_MUTEX_NAME_TWO "/sem-mutex-two"
 
 
 
@@ -42,7 +49,6 @@ int main(int argc, char* argv[])
         perror("Please specify the file name");
         exit(-1);
     }
-
 
     // set the word and the file path
     string word = argv[1];
@@ -81,61 +87,54 @@ int main(int argc, char* argv[])
         perror ("sem_open");
 
 
-    sem_post(mutex_sem);
-
-        
     if (cid > 0) {  
         // parent
+        close(sv[1]);
 
-        // get the file
-        ifstream in(fpath);
+        int fd = open(fpath, O_RDONLY);
+        if (fd == -1) {
+            perror("Open!");
+            kill(cid, SIGKILL);
+            exit(-1);
+        }
+        
+        sem_post(mutex_sem);
 
-        string line = "";
-        char str[BUF_SIZE];
- 
-        // read the file line by line into str
-        while(getline(in,line)) {
-
-        	sem_wait(mutex_sem);
-
-            // copy string into str and null terminate
-        	line.copy(str,line.size()+1);
-        	str[line.size()] = '\0';
-
-        	//cout << str << endl;
-
-            // pass to child through the socket
-        	write(sv[0],&str,BUF_SIZE);
-
-        	sem_post(mutex_sem_two);
+        /* Number of bytes returned by read() and write() */
+        ssize_t ret_in, ret_out;   
+        char buffer[BUF_SIZE]; 
+        while((ret_in = read (fd, &buffer, 1)) > 0){
+            
+            ret_out = write (sv[0], &buffer, 1);
+            if(ret_out != ret_in){
+                /* Write error */
+                perror("write");
+                kill(cid, SIGKILL);
+                exit(-1);
+            }
         }
 
-        // cout << "write done" << endl;
+        write (sv[0], "\0", 1);
 
-        // this tell the child that the file is over
-        write (sv[0], "\0\0", 2);
-        sem_post(mutex_sem_two);
+        sem_wait(mutex_sem);
+        //sem_wait(mutex_sem_two);
 
-        // this will count the amout of times the word is found
-        int find_count = 0;
+        int found_count = 0;
+        char read_buffer[BUF_SIZE];
+        ssize_t socket_in;
+        while((socket_in = read (sv[0], &read_buffer, 1)) > 0) {
+            sem_post(mutex_sem_two);
+            write (1, &read_buffer, (ssize_t) socket_in);
+            /*The special character '\0' is encountered*/
+            if(read_buffer[0] == '\0')
+                break;
 
-        // recieve lines from the child that contain the word
-        while (1) {
-            // read the line
-        	read(sv[0],&str,BUF_SIZE);
-
-        	// check if file over
-        	if (str[0] == '\0' && str[1] == '\0'){
-        		break;
-        	}
-
-            // increment counter and print the line
-        	find_count++;
-        	cout << str << endl;
+            if(read_buffer[0] == '\n')
+                found_count++;
         }
 
-        cout << "\n" << word << " WAS FOUND " << find_count << " TIMES!\n" << endl;
-
+        printf("\nFOUND %d TIMES!\n\n",found_count);
+       
         // unlink mutex sem
         if (sem_unlink(SEM_MUTEX_NAME) == -1) {
             perror ("sem_unlink"); 
@@ -148,60 +147,73 @@ int main(int argc, char* argv[])
             exit (1);
         }
 
+        close(sv[0]);
+        close(sv[1]);
+
         // to reap the child zombie process
         wait(NULL);
     } 
     else { 
-        // child
-        char str[BUF_SIZE];
+        close(sv[0]);
+
+        ssize_t socket_in;
+        char buffer[BUF_SIZE]; 
+
         vector<string> all_lines;
 
-        while(1) {
-        	sem_wait(mutex_sem_two);
+        int line_count = 0;
+        all_lines.push_back("");
 
-        	// read from socket
-        	read(sv[1],&str,BUF_SIZE);
+        while((socket_in = read (sv[1], &buffer, 1)) > 0) {
 
-        	// conver to string
-        	string line(str);
+            if (buffer[0] == '\n'){
+                line_count++;
+                all_lines.push_back("");
+            }
+            else
+                all_lines.at(line_count) += buffer[0];
+            // conver to string
+            string line(buffer);
 
-        	// find word on line
-        	if (line.find(" "+word) != string::npos ||
-        		line.find(" "+word+",") != string::npos ||
-        		line.find(" "+word+";") != string::npos ||
-        		line.find(" "+word+":") != string::npos ||
-        		line.find(" "+word+".") != string::npos ||
-        		line.find(word) != string::npos){
-        		all_lines.push_back(line);
-        	}
+            //write (1, &buffer, (ssize_t) socket_in);
 
-      		// check if file over
-        	if (str[0] == '\0' && str[1] == '\0'){
-        		break;
-        	}
-
-            // release to allow for another line to be passed
-        	sem_post(mutex_sem);
+            /*The special character '\0' is encountered*/
+            if(buffer[0] == '\0')
+                break;
         }
 
-        // sort the lines aplhabetically
-        sort(all_lines.begin(),all_lines.end(),compare_strings);
+        vector<string> ret_lines;
+        for (int i=0;i<all_lines.size();++i) {
+            string line = all_lines.at(i);
+            std::transform(line.begin(), line.end(), line.begin(), ::tolower);
 
-
-        // return lines where file is found to the parent
-        for (int i=0;i<(int)all_lines.size();++i) {
-            // turn string into char array
-        	all_lines.at(i).copy(str,all_lines.at(i).size()+1);
-
-            // null terminate line
-        	str[all_lines.at(i).size()] = '\0';
-
-            // pass the line through the socket
-        	write(sv[1],&str,BUF_SIZE);
+            // find word on line
+            size_t pos = line.find(word);
+            if (pos != string::npos) {
+                if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + word.size()]))){
+                    ret_lines.push_back(all_lines.at(i)+"\n");
+                }
+            }
         }
 
-        // end of return lines to parent
-        write (sv[1], "\0\0", 2);
+        sort(ret_lines.begin(),ret_lines.end(),compare_strings);
+
+        all_lines.clear();
+
+
+        for (int i=0;i<ret_lines.size();++i) {
+            string line = ret_lines.at(i);
+            for (int j=0;j<line.size();++j) {
+
+                // cout << line[j];
+                write(sv[1],&line[j],1);
+                sem_post(mutex_sem_two);
+            }
+        }
+
+        write(sv[1],"\0",1);
+
+        sem_post(mutex_sem);  
     }
 
     return 0;

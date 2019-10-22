@@ -15,6 +15,7 @@ using std::cin;
 using std::cout;
 using std::endl;
 #include <algorithm> 
+#include <cctype>
 
 
 #include "parent_2.h"
@@ -267,14 +268,17 @@ void *Mapper(void *arguments) {
     // this determines how long the loop with run
     int run = (v.size()/NUM_THREADS);
 
-    //cout << "run size is " << run << endl;
-    //cout << "offset size is " << offset << endl;
-
     for (int i=0;i<run;++i) {
+        // get line and turn to lower case
+        string line = v.at(offset+i);
+        std::transform(line.begin(), line.end(), line.begin(), ::tolower);
+
         // if the word of interest is found add to the found vector
-        if (v.at(offset+i).find((args->word)) != std::string::npos) {
-            //cout << "thead " << (args->thread_id) << ": " << v.at(offset+i) << endl;
-            (args->found).push_back(v.at(offset+i));
+        size_t pos = line.find((args->word));
+        if (pos != std::string::npos) {
+            if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + (args->word).size()]))) {
+                (args->found).push_back(v.at(offset+i));
+            }
         }
     }
 

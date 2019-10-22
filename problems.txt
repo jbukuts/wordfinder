@@ -1,0 +1,69 @@
+Here are some sample results for execution time
+
+SUBPROJECT 1:
+
+	time ./main_1 happy text_files/ANNA_KARENINA.txt
+		real	0m3.228s
+		user	0m1.608s
+		sys	0m4.212s
+
+	time ./main_1 time text_files/big.txt
+		real	0m10.504s
+		user	0m4.902s
+		sys	0m14.008
+
+SUBPROJECT 2:
+
+	time ./main_1 happy text_files/ANNA_KARENINA.txt
+		real	0m0.041s
+		user	0m0.000s
+		sys	0m0.007s
+
+
+	time ./main_2 time text_files/big.txt 
+		real	0m0.179s
+		user	0m0.011s
+		sys	0m0.011s
+
+
+CONCLUSIONS:
+Comparing the two projects its easy to see that the time it takes for subproject 2 to complete the task is much shorter.
+One of the factors that definitely is affecting this is the fact that subproject 2 is making use of threads whereas 1 is not. Given that four threads are running concurrently to parse the shared memory data this means thats that this can essentially be completed 4 times are fast given that subproject one must iterate through the entire file essentially acting as a single threads.
+
+The forms of IPC used also may play a role given that shared memory need make no syscalls whereas UDS must. Im not sure as to how much this would affect the execution time but still it may be a factor to be accounted for.
+
+Lastly rather then using a large char array to pass data between socket I opted to use a single char. This definietly hampers performed by a large amount compared to the shared memory project where I used char arrays.
+
+
+Different IPC Provided by Linux:
+
+UDS:
+	-combination of message queeue and pipe
+	-bi-directional data passage
+	-named by pathname
+
+Shared Memory:
+	-a region of memory that is mapped to 2 or more processes
+	-when a process updates the share memory the other process can see the modification immediately
+	-most efficient given that no syscalls have to be made
+
+Message Queues:
+	-essentialy a queue in the kernel
+	
+Pipe:
+	-technique for passing information, like a stream, from one process to another as a byte stream
+	-limited to parent and child processes
+	-exist purely in memory
+	-useful for pushing output of commnad as input of another
+
+FIFO:
+	-also known as a named pipe
+	-very similar except not limited to parent and child processes
+	-actual file is created 
+
+Understanding of MapReduce:
+My current understand of Map Reduce is that it is an algorithm that is usually used to organize large data sets in parallel. The way this is done is with the use of a Mapper function that takes items with key/value pairs and then moves to given these items and intermediate key value pair. The second part is a Reducer function that acts to merge the values from mapper by grouping by these items by the intermediate key/value pair creating during the Mapper phase. 
+
+Understanding of Hadoop:
+From my reading on Hadoop it seems to be a framework of utilities with a large part of it being the MapReduce algorithm. I would assume that it is used in industry given the fact that it allows for complex problems to be solved in parallel, similar to map reduce, but adds more aspects as well as the fact that it is open-source making it easier for those in the field to pick apart the framework.
+

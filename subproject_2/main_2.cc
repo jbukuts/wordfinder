@@ -73,6 +73,15 @@ int main( int argc, const char* argv[] ) {
         // print the final results
         printf("%s\n", shm);
 
+        int found_count = 0;
+        int return_size = strlen(shm);
+        for(int i=0;i<return_size;++i){
+            if (shm[i] == '\n')
+                found_count++;
+        }
+
+        printf("FOUND %d TIMES!\n\n",found_count);
+
         shm_unlink(SHARED_MEM_NAME);
         munmap(shm,pipe_size);
     } 
