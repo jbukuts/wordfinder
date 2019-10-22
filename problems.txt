@@ -65,5 +65,5 @@ Understanding of MapReduce:
 My current understand of Map Reduce is that it is an algorithm that is usually used to organize large data sets in parallel. The way this is done is with the use of a Mapper function that takes items with key/value pairs and then moves to given these items and intermediate key value pair. The second part is a Reducer function that acts to merge the values from mapper by grouping by these items by the intermediate key/value pair creating during the Mapper phase. 
 
 Understanding of Hadoop:
-From my reading on Hadoop it seems to be a framework of utilities with a large part of it being the MapReduce algorithm. I would assume that it is used in industry given the fact that it allows for complex problems to be solved in parallel, similar to map reduce, but adds more aspects as well as the fact that it is open-source making it easier for those in the field to pick apart the framework.
+From my reading on Hadoop it seems to be a framework of utilities with a large part of it being the MapReduce algorithm. I would assume that it is used in industry given the fact that it allows for complex problems to be solved in parallel, similar to map reduce, but adds more aspects as well as the fact that it is open-source making it easier for those in the field to pick apart the framework and collaborate.
 

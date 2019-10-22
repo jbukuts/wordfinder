@@ -5,9 +5,9 @@ C++ program that will find given word within a given file
 ## Compilation
 included makefile has multiple options
 - `make` will run the `test`  option in the makefile which will clean the directory and then proceed to run a test case on both of the sub projects
-- `one` will only compile the first sub project and nothing else
-- `two` will only compile the second sub project and nothing else
-- `clean` of course will clean the working the directory of compiled files
+- `make one` will only compile the first sub project and nothing else
+- `make two` will only compile the second sub project and nothing else
+- `make clean` of course will clean the working the directory of compiled files
 
 ## Usage
 Once compiled each sub project will have its own executable either by the name of `main_1` or `main_2` with them relating to sub project 1 and sub project 2 respectively. 
@@ -15,7 +15,7 @@ Once compiled each sub project will have its own executable either by the name o
 In order to properly execute the program the proper usage is:
 `./main_1 [word] [file_path]`
 
-with the command line variables with self explanatory. Order is the same for both sub projects.
+Order is the same for both sub projects.
 
 ## Principles
 This program makes us of various form of IPC to pass information between a child and parent process. Those that are made use of are:

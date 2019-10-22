@@ -229,8 +229,6 @@ int child(string word, int size) {
     // unmap the shared memory
     munmap(dest,final_size);
 
-    //printf("CHILD TO PARENT.\n");
-
     if (sem_post(child_mutex_sem) == -1)
         perror("sem_post");
 
@@ -265,6 +263,7 @@ void *Mapper(void *arguments) {
     // this determines starting point in the vector
     int offset = (v.size()/NUM_THREADS) * (args->thread_id);
 
+
     // this determines how long the loop with run
     int run = (v.size()/NUM_THREADS);
 
@@ -275,7 +274,8 @@ void *Mapper(void *arguments) {
 
         // if the word of interest is found add to the found vector
         size_t pos = line.find((args->word));
-        if (pos != std::string::npos) {
+        if (pos != string::npos) {
+            // if next to find are not letters
             if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + (args->word).size()]))) {
                 (args->found).push_back(v.at(offset+i));
             }

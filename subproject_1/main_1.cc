@@ -53,9 +53,6 @@ int main(int argc, char* argv[])
     // set the word and the file path
     string word = argv[1];
     char* fpath = argv[2];
-
-    // tell user the word being looked for
-    //cout << "word is " << word << endl;
     
     // the pair of the socket descriptors
     int sv[2];
@@ -97,9 +94,7 @@ int main(int argc, char* argv[])
             kill(cid, SIGKILL);
             exit(-1);
         }
-        
-        sem_post(mutex_sem);
-
+            
         /* Number of bytes returned by read() and write() */
         ssize_t ret_in, ret_out;   
         char buffer[BUF_SIZE]; 
@@ -114,25 +109,28 @@ int main(int argc, char* argv[])
             }
         }
 
+        // end of write signifier
         write (sv[0], "\0", 1);
-
-        sem_wait(mutex_sem);
-        //sem_wait(mutex_sem_two);
 
         int found_count = 0;
         char read_buffer[BUF_SIZE];
         ssize_t socket_in;
         while((socket_in = read (sv[0], &read_buffer, 1)) > 0) {
+            // decrement
             sem_post(mutex_sem_two);
+            // write to terminal
             write (1, &read_buffer, (ssize_t) socket_in);
-            /*The special character '\0' is encountered*/
+            
+            // end of file signifier
             if(read_buffer[0] == '\0')
                 break;
 
+            // if new line found
             if(read_buffer[0] == '\n')
                 found_count++;
         }
 
+        // amount of times found
         printf("\nFOUND %d TIMES!\n\n",found_count);
        
         // unlink mutex sem
@@ -147,6 +145,7 @@ int main(int argc, char* argv[])
             exit (1);
         }
 
+        // close the sockets
         close(sv[0]);
         close(sv[1]);
 
@@ -159,66 +158,72 @@ int main(int argc, char* argv[])
         ssize_t socket_in;
         char buffer[BUF_SIZE]; 
 
+        // holds all line from the file
         vector<string> all_lines;
 
         int line_count = 0;
         all_lines.push_back("");
 
+        // read in file char by char
         while((socket_in = read (sv[1], &buffer, 1)) > 0) {
 
+            // if new line found push running line to vector
             if (buffer[0] == '\n'){
                 line_count++;
                 all_lines.push_back("");
             }
             else
                 all_lines.at(line_count) += buffer[0];
-            // conver to string
-            string line(buffer);
-
-            //write (1, &buffer, (ssize_t) socket_in);
 
             /*The special character '\0' is encountered*/
             if(buffer[0] == '\0')
                 break;
         }
 
+        // check all lines for the word
         vector<string> ret_lines;
-        for (int i=0;i<all_lines.size();++i) {
+        for (int i=0;i<(int)all_lines.size();++i) {
+            // conv line to all lower case
             string line = all_lines.at(i);
             std::transform(line.begin(), line.end(), line.begin(), ::tolower);
 
             // find word on line
             size_t pos = line.find(word);
             if (pos != string::npos) {
+                // if word is found and char next to are not letters
                 if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + word.size()]))){
                     ret_lines.push_back(all_lines.at(i)+"\n");
                 }
             }
         }
 
+        // sort the lines
         sort(ret_lines.begin(),ret_lines.end(),compare_strings);
 
+        // empty large vector
         all_lines.clear();
 
 
-        for (int i=0;i<ret_lines.size();++i) {
+        // through each line
+        for (int i=0;i<(int)ret_lines.size();++i) {
+            // through the line
             string line = ret_lines.at(i);
-            for (int j=0;j<line.size();++j) {
-
-                // cout << line[j];
+            for (int j=0;j<(int)line.size();++j) {
+                // write each char of the line to the socket
                 write(sv[1],&line[j],1);
                 sem_post(mutex_sem_two);
             }
         }
 
+        // write and release to denate end of pass
         write(sv[1],"\0",1);
-
         sem_post(mutex_sem);  
     }
 
     return 0;
 }
 
+// for sorting strings
 bool compare_strings(string a, string b) {
     return a<b;
 }

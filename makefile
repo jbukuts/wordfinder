@@ -12,8 +12,8 @@ COMPILE = $(CC) $(FLAGS) -c  # compilation to inter	mediary .o files
 
 
 test: clean main_1 main_2
-	./main_1 you text_files/test.txt
-	./main_2 you text_files/test.txt  
+	./main_1 test text_files/test.txt
+	./main_2 test text_files/test.txt  
 
 one: clean main_1
 
