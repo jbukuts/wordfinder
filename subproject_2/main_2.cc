@@ -19,6 +19,8 @@ using std::endl;
 #include "parent_2.h"
 
 #define SHARED_MEM_NAME "/posix-shared-mem"
+#define SEM_MUTEX_NAME "/sem-mutex"
+#define CHILD_MUTEX_NAME "/child-sem-mutex"
 
 int main( int argc, const char* argv[] ) {
 	// check arguments to ensure proper amount
@@ -26,6 +28,10 @@ int main( int argc, const char* argv[] ) {
 		cout << "need two arguments in form of ./a.out [word] [filepath]" << endl;
 		return 1;
 	}
+
+    // unlink both sems to ensure they are fresh when created
+    sem_unlink (SEM_MUTEX_NAME);
+    sem_unlink (CHILD_MUTEX_NAME);
 
 	// store arguments
 	string word = argv[1];

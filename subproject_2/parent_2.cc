@@ -16,6 +16,7 @@ using std::cout;
 using std::endl;
 #include <algorithm> 
 #include <cctype>
+#include <math.h>
 
 
 #include "parent_2.h"
@@ -27,7 +28,8 @@ using std::endl;
 #define SHARED_MEM_NAME "/posix-shared-mem"
 
 
-// holds the arguments for 
+// holds the arguments for the threads
+// within this is also a vector to hold the results
 struct arg_struct {
     long thread_id;
     vector<string> v;
@@ -152,6 +154,8 @@ int child(string word, int size) {
     //printf("there are %d lines in the file\n", (int)v.size());
 
     // array of threads and structs to hold arguments to pass
+    // the array of structs represent the arguments passed to the threads
+    // and will allow for once the threads are done to see the results
     pthread_t threads[NUM_THREADS];
     struct arg_struct args_arr[NUM_THREADS];
     int rc;
@@ -163,9 +167,11 @@ int child(string word, int size) {
         args_arr[i].thread_id = i;
         args_arr[i].v = v;
         args_arr[i].word = word;
-        rc = pthread_create(&threads[i],NULL,&Mapper,(void *)&args_arr[i]);
 
+        // starts the threads
+        rc = pthread_create(&threads[i],NULL,&Mapper,(void *)&args_arr[i]);
         if (rc) {
+            // self expl
             cout << "ERROR : there was a problem creating thread " << i << " : " << rc << endl;
             exit(-1);
         }
@@ -179,7 +185,6 @@ int child(string word, int size) {
 
     // time to reduce and return to the parent
 
-    
     // add lines found in threads to vector to be sorted
     vector<string> found_lines;
     for (int i=0;i<NUM_THREADS;++i) {
@@ -229,6 +234,7 @@ int child(string word, int size) {
     // unmap the shared memory
     munmap(dest,final_size);
 
+    // this will allow the parent to move forward and begin to read the shared memory
     if (sem_post(child_mutex_sem) == -1)
         perror("sem_post");
 
@@ -244,10 +250,11 @@ int child(string word, int size) {
         exit (1);
     }
 
+    // return the size of the new shared memory that contains the final results
     return final_size;
 }
 
-
+// compares string in order to sort them
 bool compare_strings(string a, string b) {
     return a<b;
 }
@@ -261,24 +268,40 @@ void *Mapper(void *arguments) {
     vector<string> v = (args->v);
 
     // this determines starting point in the vector
-    int offset = (v.size()/NUM_THREADS) * (args->thread_id);
+    double d_offset = (v.size()/NUM_THREADS) * (args->thread_id);
 
+    int offset = floor(d_offset);
 
     // this determines how long the loop with run
     int run = (v.size()/NUM_THREADS);
 
+    // given in the run time added is not same as amount of lines 
+    // and the last thread is running
+    // well decided to let the last thread pick up the slack
+    if ((run*NUM_THREADS) != (args->v).size() && (args->thread_id) == NUM_THREADS-1) {
+        // run from proper offset to end of file
+        run = (args->v).size() - offset;
+    }
+
+    // printf("START FROM %d AND RUN TO %d \n", offset,offset+run);
+
+    // run for specified run amount
     for (int i=0;i<run;++i) {
-        // get line and turn to lower case
+        // get line by offset of thread and turn to lower case
         string line = v.at(offset+i);
         std::transform(line.begin(), line.end(), line.begin(), ::tolower);
 
         // if the word of interest is found add to the found vector
+        // this will iterate through whole line until either word is found or not
         size_t pos = line.find((args->word));
-        if (pos != string::npos) {
+        while(pos != string::npos){
             // if next to find are not letters
             if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + (args->word).size()]))) {
                 (args->found).push_back(v.at(offset+i));
+                break;
             }
+            // move pos forward
+            pos = line.find((args->word),pos+(args->word).size());
         }
     }
 

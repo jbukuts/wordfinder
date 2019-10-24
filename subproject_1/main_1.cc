@@ -91,7 +91,6 @@ int main(int argc, char* argv[])
         int fd = open(fpath, O_RDONLY);
         if (fd == -1) {
             perror("Open!");
-            kill(cid, SIGKILL);
             exit(-1);
         }
             
@@ -104,7 +103,6 @@ int main(int argc, char* argv[])
             if(ret_out != ret_in){
                 /* Write error */
                 perror("write");
-                kill(cid, SIGKILL);
                 exit(-1);
             }
         }
@@ -115,11 +113,15 @@ int main(int argc, char* argv[])
         int found_count = 0;
         char read_buffer[BUF_SIZE];
         ssize_t socket_in;
+
+
         while((socket_in = read (sv[0], &read_buffer, 1)) > 0) {
             // decrement
             sem_post(mutex_sem_two);
             // write to terminal
-            write (1, &read_buffer, (ssize_t) socket_in);
+            //write (1, &read_buffer, (ssize_t) socket_in);
+
+            cout << &read_buffer[0];
             
             // end of file signifier
             if(read_buffer[0] == '\0')
@@ -167,6 +169,10 @@ int main(int argc, char* argv[])
         // read in file char by char
         while((socket_in = read (sv[1], &buffer, 1)) > 0) {
 
+            /*The special character '\0' is encountered*/
+            if(buffer[0] == '\0')
+                break;
+
             // if new line found push running line to vector
             if (buffer[0] == '\n'){
                 line_count++;
@@ -174,10 +180,6 @@ int main(int argc, char* argv[])
             }
             else
                 all_lines.at(line_count) += buffer[0];
-
-            /*The special character '\0' is encountered*/
-            if(buffer[0] == '\0')
-                break;
         }
 
         // check all lines for the word
@@ -189,11 +191,13 @@ int main(int argc, char* argv[])
 
             // find word on line
             size_t pos = line.find(word);
-            if (pos != string::npos) {
-                // if word is found and char next to are not letters
-                if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + word.size()]))){
-                    ret_lines.push_back(all_lines.at(i)+"\n");
+            while(pos != string::npos){
+                // if next to find are not letters
+                if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + word.size()]))) {
+                    ret_lines.push_back(all_lines.at(i)+'\n');
+                    break;
                 }
+                pos = line.find(word,pos+word.size());
             }
         }
 
@@ -204,12 +208,15 @@ int main(int argc, char* argv[])
         all_lines.clear();
 
 
+
         // through each line
         for (int i=0;i<(int)ret_lines.size();++i) {
             // through the line
             string line = ret_lines.at(i);
             for (int j=0;j<(int)line.size();++j) {
                 // write each char of the line to the socket
+                if (line[j] == '\0')
+                    cout << "FUCK" << endl;
                 write(sv[1],&line[j],1);
                 sem_post(mutex_sem_two);
             }
