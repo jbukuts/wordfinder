@@ -97,18 +97,12 @@ int main(int argc, char* argv[])
         /* Number of bytes returned by read() and write() */
         ssize_t ret_in, ret_out;   
         char buffer[BUF_SIZE]; 
-        while((ret_in = read (fd, &buffer, 1)) > 0){
-            
-            ret_out = write (sv[0], &buffer, 1);
-            if(ret_out != ret_in){
-                /* Write error */
-                perror("write");
-                exit(-1);
-            }
+        while((ret_in = read (fd, &buffer, BUF_SIZE)) > 0){
+            ret_out = write(sv[0], &buffer, BUF_SIZE);
         }
 
         // end of write signifier
-        write (sv[0], "\0", 1);
+        write (sv[0], "\0", BUF_SIZE);
 
         int found_count = 0;
         char read_buffer[BUF_SIZE];
@@ -155,6 +149,7 @@ int main(int argc, char* argv[])
         wait(NULL);
     } 
     else { 
+    	// child
         close(sv[0]);
 
         ssize_t socket_in;
@@ -167,19 +162,21 @@ int main(int argc, char* argv[])
         all_lines.push_back("");
 
         // read in file char by char
-        while((socket_in = read (sv[1], &buffer, 1)) > 0) {
-
-            /*The special character '\0' is encountered*/
-            if(buffer[0] == '\0')
+        while((socket_in = read (sv[1], &buffer, BUF_SIZE)) > 0) {
+        	/*The special character '\0' is encountered*/
+            if (buffer[0] == '\0') {
                 break;
-
-            // if new line found push running line to vector
-            if (buffer[0] == '\n'){
-                line_count++;
-                all_lines.push_back("");
             }
-            else
-                all_lines.at(line_count) += buffer[0];
+        	
+        	for (int i=0;i<BUF_SIZE;++i) {
+	            // if new line found push running line to vector
+	            if (buffer[i] == '\n'){
+	                line_count++;
+	                all_lines.push_back("");
+	            }
+	            else
+	                all_lines.at(line_count) += buffer[i];
+        	}
         }
 
         // check all lines for the word
@@ -215,8 +212,6 @@ int main(int argc, char* argv[])
             string line = ret_lines.at(i);
             for (int j=0;j<(int)line.size();++j) {
                 // write each char of the line to the socket
-                if (line[j] == '\0')
-                    cout << "FUCK" << endl;
                 write(sv[1],&line[j],1);
                 sem_post(mutex_sem_two);
             }
