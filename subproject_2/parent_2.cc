@@ -278,7 +278,7 @@ void *Mapper(void *arguments) {
     // given in the run time added is not same as amount of lines 
     // and the last thread is running
     // well decided to let the last thread pick up the slack
-    if ((run*NUM_THREADS) != (args->v).size() && (args->thread_id) == NUM_THREADS-1) {
+    if ((int)(run*NUM_THREADS) != (int)(args->v).size() && (args->thread_id) == NUM_THREADS-1) {
         // run from proper offset to end of file
         run = (args->v).size() - offset;
     }

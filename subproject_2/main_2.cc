@@ -72,9 +72,18 @@ int main( int argc, const char* argv[] ) {
         if ((fd_shm = shm_open (SHARED_MEM_NAME, O_RDWR, 0)) == -1)
             perror ("shm_open");
 
+        
         // map shared memory with size from the child pipe write
-        char *shm = (char *)mmap (NULL, pipe_size, PROT_READ | PROT_WRITE, MAP_SHARED,fd_shm, 0);
+        char *shm  = (char *)mmap (NULL, pipe_size, PROT_READ | PROT_WRITE, MAP_SHARED,fd_shm, 0);
 
+        // if none found then pip size will be 0
+        // this would cause seg fault so take into account
+        if (pipe_size == 0) {
+            shm_unlink(SHARED_MEM_NAME);
+            munmap(shm,pipe_size);
+            printf("FOUND 0 TIMES!\n\n");
+            exit(0);
+        }
 
         // print the final results
         printf("%s\n", shm);
