@@ -18,6 +18,8 @@ using std::endl;
 #include <cctype>
 #include <math.h>
 
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
 
 #include "parent_2.h"
 
@@ -45,12 +47,11 @@ void parent(const char* path) {
     int fd_shm;
     char *src, *dest;
 
-    //  mutual exclusion semaphore, mutex_sem with an initial value 0.
-    if ((mutex_sem = sem_open (SEM_MUTEX_NAME, O_CREAT, 0660, 0)) == SEM_FAILED)
+    // open semaphore
+    if ((mutex_sem = sem_open (SEM_MUTEX_NAME, 0, 0, 0)) == SEM_FAILED)
         perror ("sem_open");
 
-    //  mutual exclusion semaphore, mutex_sem with an initial value 0.
-    if ((child_mutex_sem = sem_open (CHILD_MUTEX_NAME, O_CREAT, 0660, 0)) == SEM_FAILED)
+    if ((child_mutex_sem = sem_open (CHILD_MUTEX_NAME, 0, 0, 0)) == SEM_FAILED)
         perror ("sem_open");
 
     int fd = open(path, O_RDWR);
@@ -124,31 +125,17 @@ int child(string word, int size) {
     // vector of all lines the file
     vector<string> v;
 
-    // add lines to the vector
-    string line = "";
-    for (int i=0;i<size;++i) {
+    string whole_shm = shm;
 
-        if (shm[i] == '\n') {
-            // if new line is found add running line string to the vector
-            // and empty line string
-            v.push_back(line);
-            line = "";
-        }
-        else if (i == size-1) {
-            // if at the end add last character
-            // and push to end of vector
-            line += shm[i];
-            v.push_back(line);
-        }
-        else 
-            line += shm[i]; // else add to running line string
+    size_t current;
+    size_t previous = 0;
+    current = whole_shm.find("\n");
+    while (current != string::npos) {
+        v.push_back(whole_shm.substr(previous, current - previous));
+        previous = current + 1;
+        current = whole_shm.find("\n", previous);
     }
-
-    // test to print the entire file
-    // print from the vector
-    for (int i=0;i<(int)v.size();++i) {
-        // cout << v.at(i) << endl;
-    }
+    v.push_back(whole_shm.substr(previous, current - previous));
 
     // the amount of lines in the file
     //printf("there are %d lines in the file\n", (int)v.size());
@@ -203,6 +190,9 @@ int child(string word, int size) {
         end_string += found_lines.at(i)+"\n";
     }
 
+    // amount of times found will be added to the shared mem
+    end_string += "\nFOUND "+std::to_string(found_lines.size())+" TIMES!\n";
+
     // convet from string to char array to be copied to shared memory
     char *final_results = new char[end_string.length() + 1];
     strcpy(final_results, end_string.c_str());
@@ -256,7 +246,19 @@ int child(string word, int size) {
 
 // compares string in order to sort them
 bool compare_strings(string a, string b) {
-    return a<b;
+
+    string new_a = a;
+    string new_b = b;
+
+    int a_pos = 0;
+    if ((a_pos = a.find(KRED)) != string::npos && a_pos == 0)
+        new_a = a.substr(8);
+
+    int b_pos = 0;
+    if ((b_pos = b.find(KRED)) != string::npos && b_pos == 0)
+        new_b = b.substr(8);
+
+    return new_a<new_b;
 }
 
 
@@ -297,7 +299,14 @@ void *Mapper(void *arguments) {
         while(pos != string::npos){
             // if next to find are not letters
             if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + (args->word).size()]))) {
-                (args->found).push_back(v.at(offset+i));
+                string st = v.at(offset+i);
+
+                string begin = st.substr(0,pos);
+                string middle = st.substr(pos,(args->word).size());
+                string end = st.substr(pos+(args->word).size());
+
+
+                (args->found).push_back(begin+KRED+middle+KNRM+end);
                 break;
             }
             // move pos forward

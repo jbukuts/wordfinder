@@ -32,7 +32,8 @@ using namespace std;
 #include <string.h>
 #include <cctype>
 
-
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
 
 #define BUF_SIZE 4096
 #define SEM_MUTEX_NAME "/sem-mutex-one"
@@ -95,10 +96,10 @@ int main(int argc, char* argv[])
         }
             
         /* Number of bytes returned by read() and write() */
-        ssize_t ret_in, ret_out;   
+        ssize_t ret_in;   
         char buffer[BUF_SIZE]; 
         while((ret_in = read (fd, &buffer, BUF_SIZE)) > 0){
-            ret_out = write(sv[0], &buffer, BUF_SIZE);
+            write(sv[0], &buffer, BUF_SIZE);
         }
 
         // end of write signifier
@@ -191,7 +192,12 @@ int main(int argc, char* argv[])
             while(pos != string::npos){
                 // if next to find are not letters
                 if (!(isalpha(line[pos - 1])) && !(isalpha(line[pos + word.size()]))) {
-                    ret_lines.push_back(all_lines.at(i)+'\n');
+                    
+                    string begin = all_lines.at(i).substr(0,pos);
+                    string middle = all_lines.at(i).substr(pos,word.size());
+                    string end = all_lines.at(i).substr(pos+word.size());
+
+                    ret_lines.push_back(begin+KRED+middle+KNRM+end+'\n');
                     break;
                 }
                 pos = line.find(word,pos+word.size());
@@ -227,5 +233,16 @@ int main(int argc, char* argv[])
 
 // for sorting strings
 bool compare_strings(string a, string b) {
-    return a<b;
+    string new_a = a;
+    string new_b = b;
+
+    int a_pos = 0;
+    if ((a_pos = a.find(KRED)) != string::npos && a_pos == 0)
+        new_a = a.substr(8);
+
+    int b_pos = 0;
+    if ((b_pos = b.find(KRED)) != string::npos && b_pos == 0)
+        new_b = b.substr(8);
+
+    return new_a<new_b;
 }

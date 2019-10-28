@@ -8,6 +8,10 @@ tester test
 tester
 tester test tester
 tester TEst
+test;
+test/
+test.
+test,
 
 
 

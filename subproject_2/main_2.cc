@@ -28,10 +28,22 @@ int main( int argc, const char* argv[] ) {
 		cout << "need two arguments in form of ./a.out [word] [filepath]" << endl;
 		return 1;
 	}
+    sem_t *mutex_sem;
+    sem_t *child_mutex_sem;
 
     // unlink both sems to ensure they are fresh when created
     sem_unlink (SEM_MUTEX_NAME);
     sem_unlink (CHILD_MUTEX_NAME);
+
+    //  mutual exclusion semaphore, mutex_sem with an initial value 0.
+    if ((mutex_sem = sem_open (SEM_MUTEX_NAME, O_CREAT, 0660, 0)) == SEM_FAILED) {
+        perror ("sem_open");
+    }
+
+    //  mutual exclusion semaphore, mutex_sem with an initial value 0.
+    if ((child_mutex_sem = sem_open (CHILD_MUTEX_NAME, O_CREAT, 0660, 0)) == SEM_FAILED) {
+        perror ("sem_open");
+    }
 
 	// store arguments
 	string word = argv[1];
@@ -87,15 +99,6 @@ int main( int argc, const char* argv[] ) {
 
         // print the final results
         printf("%s\n", shm);
-
-        int found_count = 0;
-        int return_size = strlen(shm);
-        for(int i=0;i<return_size;++i){
-            if (shm[i] == '\n')
-                found_count++;
-        }
-
-        printf("FOUND %d TIMES!\n\n",found_count);
 
         shm_unlink(SHARED_MEM_NAME);
         munmap(shm,pipe_size);
