@@ -236,11 +236,11 @@ bool compare_strings(string a, string b) {
     string new_a = a;
     string new_b = b;
 
-    int a_pos = 0;
+    size_t a_pos = 0;
     if ((a_pos = a.find(KRED)) != string::npos && a_pos == 0)
         new_a = a.substr(8);
 
-    int b_pos = 0;
+    size_t b_pos = 0;
     if ((b_pos = b.find(KRED)) != string::npos && b_pos == 0)
         new_b = b.substr(8);
 
